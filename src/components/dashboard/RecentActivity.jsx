@@ -1,19 +1,19 @@
 import { Link } from 'react-router-dom';
 import { recentActivity } from '../../data/mockData';
-import { CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 
-const statusIcon = {
-  confirmed: <CheckCircle size={16} color="#22c55e" />,
-  warning: <AlertCircle size={16} color="#f59e0b" />,
-  error: <XCircle size={16} color="#ef4444" />,
-  flagged: <AlertCircle size={16} color="#f59e0b" />,
-};
+function StatusIcon({ status }) {
+  if (status === 'confirmed') return <CheckCircle2 size={16} color="#26890d" />;
+  if (status === 'error')     return <XCircle      size={16} color="#da291c" />;
+  return                             <AlertCircle  size={16} color="#ed8b00" />;
+}
 
-const eventClass = {
-  'Entry Confirmed': 'badge--green',
-  'Exit Confirmed': 'badge--green',
-  'Re-entry without exit': 'badge--orange',
-};
+function resultBadgeClass(event) {
+  if (event === 'Entry Confirmed') return 'badge--entry-confirmed';
+  if (event === 'Exit Confirmed')  return 'badge--exit-confirmed';
+  if (event === 'Re-entry without exit') return 'badge--re-entry';
+  return 'badge--gray';
+}
 
 export default function RecentActivity() {
   return (
@@ -25,12 +25,16 @@ export default function RecentActivity() {
       <div className="activity-list">
         {recentActivity.map(item => (
           <div key={item.id} className="activity-row">
-            <div className="activity-row__icon">{statusIcon[item.status]}</div>
+            <StatusIcon status={item.status} />
             <div className="activity-row__info">
               <div className="activity-row__name">{item.name}</div>
-              <div className="activity-row__meta">Confidence: {item.confidence}% · {item.time}</div>
+              <div className="activity-row__meta">
+                Confidence: {item.confidence}% · {item.time}
+              </div>
             </div>
-            <span className={`badge ${eventClass[item.event] || 'badge--gray'}`}>{item.event}</span>
+            <span className={`badge ${resultBadgeClass(item.event)}`}>
+              {item.event}
+            </span>
           </div>
         ))}
       </div>

@@ -2,12 +2,14 @@ import { Link } from 'react-router-dom';
 import { activeAlerts } from '../../data/mockData';
 
 export default function ActiveAlerts() {
+  const activeCount = activeAlerts.filter(a => a.status === 'active').length;
+
   return (
     <div className="active-alerts">
       <div className="panel-header">
         <div className="panel-header__title">
           Active Alerts
-          <span className="badge badge--red">{activeAlerts.filter(a => a.status === 'active').length}</span>
+          <span className="badge badge--active">{activeCount}</span>
         </div>
         <Link to="/alerts" className="panel-header__link">All Alerts →</Link>
       </div>
@@ -20,9 +22,9 @@ export default function ActiveAlerts() {
               <div className="alert-row__time">{alert.time}</div>
             </div>
             {alert.status === 'active' ? (
-              <button className="btn btn--sm btn--outline">View</button>
+              <span className="badge badge--active">Active</span>
             ) : (
-              <button className="btn btn--sm btn--ghost">Resolved</button>
+              <span className="badge badge--resolved">Resolved</span>
             )}
           </div>
         ))}

@@ -1,4 +1,4 @@
-import { User, Settings, ChevronDown } from 'lucide-react';
+import { User, Settings, ChevronDown, Bell } from 'lucide-react';
 
 export default function Header() {
   return (
@@ -10,12 +10,14 @@ export default function Header() {
       </div>
       <div className="app-header__actions">
         <button className="header-icon-btn">
+          <Bell size={16} />
+        </button>
+        <button className="header-icon-btn">
           <User size={16} />
           <ChevronDown size={14} />
         </button>
         <button className="header-icon-btn">
           <Settings size={16} />
-          <ChevronDown size={14} />
         </button>
       </div>
     </header>

@@ -14,7 +14,7 @@ export default function Footer() {
       </div>
       <div className="app-footer__sync">
         <span>Last sync: 09:42:14 AM</span>
-        <RefreshCw size={12} />
+        <RefreshCw size={12} style={{ marginLeft: 4 }} />
       </div>
     </footer>
   );
