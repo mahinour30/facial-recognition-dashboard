@@ -1,23 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import {
-  Search,
-  Filter,
-  Download,
-  ChevronsUpDown,
-  ChevronLeft,
-  ChevronRight,
-  UserPlus,
-  MoreVertical,
-  X,
-  Mail,
-  Trash2,
-  Eye,
-  Pencil,
+  Search, Filter, Download, ChevronsUpDown,
+  ChevronLeft, ChevronRight, UserPlus, MoreVertical,
+  X, Mail, Trash2, Eye, Pencil, Info,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { people as initialPeople } from '../data/mockData';
 
-/* ---- badge mapping per Figma enrollment states ---- */
 function stateBadgeClass(state) {
   const map = {
     'Not Enrolled':          'badge--not-enrolled',
@@ -32,7 +21,6 @@ function stateBadgeClass(state) {
   return map[state] || 'badge--gray';
 }
 
-/* ---- consent dot colors per Figma ---- */
 function ConsentDot({ consent }) {
   const dotColors = {
     Pending:   '#ed8b00',
@@ -51,8 +39,54 @@ function ConsentDot({ consent }) {
   );
 }
 
+/* ---- Shared info modal shell (matches Figma popup style) ---- */
+function InfoModal({ title, body, confirmLabel, onCancel, onConfirm }) {
+  return (
+    <div className="modal-backdrop">
+      <div className="modal modal--info">
+        <button className="modal__close" onClick={onCancel}><X size={18} /></button>
+        <div className="modal__info-icon">
+          <Info size={22} color="#007cb0" />
+        </div>
+        <h2 className="modal__info-title">{title}</h2>
+        <p className="modal__info-body">{body}</p>
+        <div className="modal__info-footer">
+          <button className="btn btn--outline" onClick={onCancel}>Cancel</button>
+          <button className="btn btn--primary" onClick={onConfirm}>{confirmLabel}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---- Delete confirm modal ---- */
+function DeleteModal({ count, onCancel, onConfirm }) {
+  return (
+    <div className="modal-backdrop">
+      <div className="modal modal--info">
+        <button className="modal__close" onClick={onCancel}><X size={18} /></button>
+        <div className="modal__info-icon modal__info-icon--danger">
+          <Trash2 size={22} color="#da291c" />
+        </div>
+        <h2 className="modal__info-title">Delete / Offboard</h2>
+        <p className="modal__info-body">
+          Are you sure you want to offboard <strong>{count}</strong>{' '}
+          {count === 1 ? 'user' : 'users'}? This action cannot be undone and
+          will remove all associated face vectors.
+        </p>
+        <div className="modal__info-footer">
+          <button className="btn btn--outline" onClick={onCancel}>Cancel</button>
+          <button className="btn btn--danger" onClick={onConfirm}>
+            Delete / Offboard
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ---- Row context menu ---- */
-function ContextMenu({ person, onClose, onEnroll }) {
+function ContextMenu({ person, onClose, onRequestConsent, onInviteEnroll, onDelete }) {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -66,56 +100,33 @@ function ContextMenu({ person, onClose, onEnroll }) {
   return (
     <div className="context-menu" ref={ref}>
       <button className="context-menu__item">
-        <Eye size={14} />
-        View profile
+        <Eye size={14} /> View profile
       </button>
       <button className="context-menu__item">
-        <Pencil size={14} />
-        Edit
+        <Pencil size={14} /> Edit
       </button>
-      <button className="context-menu__item" onClick={() => { onEnroll(); onClose(); }}>
-        <UserPlus size={14} />
-        Invite to enroll
+      <button className="context-menu__item" onClick={() => { onRequestConsent(); onClose(); }}>
+        <Mail size={14} /> Request consent
       </button>
-      <button className="context-menu__item context-menu__item--danger">
-        <Trash2 size={14} />
-        Delete / offboard
+      <button className="context-menu__item" onClick={() => { onInviteEnroll(); onClose(); }}>
+        <UserPlus size={14} /> Invite to enroll
       </button>
-    </div>
-  );
-}
-
-/* ---- Delete Confirm Modal ---- */
-function DeleteModal({ count, onCancel, onConfirm }) {
-  return (
-    <div className="modal-backdrop">
-      <div className="modal">
-        <div className="modal__header">
-          <span className="modal__title">Confirm Deletion</span>
-          <button className="icon-btn" onClick={onCancel}><X size={16} /></button>
-        </div>
-        <div className="modal__body">
-          Are you sure you want to offboard <strong>{count}</strong>{' '}
-          {count === 1 ? 'user' : 'users'}? This action cannot be undone and
-          will remove all associated face vectors.
-        </div>
-        <div className="modal__footer">
-          <button className="btn btn--outline" onClick={onCancel}>Cancel</button>
-          <button className="btn btn--danger" onClick={onConfirm}>
-            <Trash2 size={14} /> Delete / Offboard
-          </button>
-        </div>
-      </div>
+      <button className="context-menu__item context-menu__item--danger"
+        onClick={() => { onDelete(); onClose(); }}>
+        <Trash2 size={14} /> Delete / offboard
+      </button>
     </div>
   );
 }
 
 export default function PeopleAndAccess() {
-  const [rows, setRows]              = useState(initialPeople);
-  const [selected, setSelected]     = useState([]);
-  const [search, setSearch]         = useState('');
-  const [openMenuId, setOpenMenuId] = useState(null);
-  const [showDelete, setShowDelete] = useState(false);
+  const [rows, setRows]               = useState(initialPeople);
+  const [selected, setSelected]       = useState([]);
+  const [search, setSearch]           = useState('');
+  const [openMenuId, setOpenMenuId]   = useState(null);
+  const [modal, setModal]             = useState(null); // 'consent' | 'enroll' | 'delete'
+  // When triggered from a single row (3-dot menu), store that person's id
+  const [targetIds, setTargetIds]     = useState([]);
   const navigate = useNavigate();
 
   const filtered = rows.filter(p =>
@@ -123,32 +134,50 @@ export default function PeopleAndAccess() {
   );
 
   const toggleSelect = id =>
-    setSelected(prev =>
-      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
-    );
+    setSelected(prev => prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]);
 
   const toggleAll = () =>
-    setSelected(prev =>
-      prev.length === filtered.length ? [] : filtered.map(p => p.id)
-    );
+    setSelected(prev => prev.length === filtered.length ? [] : filtered.map(p => p.id));
+
+  // Open a modal — from bulk bar use selected[], from row menu pass [personId]
+  const openModal = (type, ids) => {
+    setTargetIds(ids);
+    setModal(type);
+  };
+
+  const closeModal = () => { setModal(null); setTargetIds([]); };
+
+  const handleConsentConfirm = () => {
+    setRows(prev => prev.map(p =>
+      targetIds.includes(p.id) ? { ...p, consent: 'Pending', state: 'Consent Requested' } : p
+    ));
+    setSelected([]);
+    closeModal();
+  };
+
+  const handleEnrollConfirm = () => {
+    closeModal();
+    navigate('/people/enroll');
+  };
 
   const handleDeleteConfirm = () => {
-    setRows(prev => prev.filter(p => !selected.includes(p.id)));
+    setRows(prev => prev.filter(p => !targetIds.includes(p.id)));
     setSelected([]);
-    setShowDelete(false);
+    closeModal();
   };
+
+  const count = targetIds.length;
 
   return (
     <div className="page">
       <div className="page-header">
         <h1 className="page-title">People and Access</h1>
         <button className="btn btn--primary" onClick={() => navigate('/people/enroll')}>
-          <UserPlus size={14} />
-          Add Users
+          <UserPlus size={14} /> Add Users
         </button>
       </div>
 
-      {/* ---- Enrollment summary stats ---- */}
+      {/* Enrollment summary */}
       <div className="enrollment-stats">
         <div className="enrollment-stat">
           <div className="enrollment-stat__header">
@@ -165,7 +194,6 @@ export default function PeopleAndAccess() {
             <span>Remaining: 38</span>
           </div>
         </div>
-
         <div className="enrollment-stat">
           <div className="enrollment-stat__header">
             <span className="enrollment-stat__label">Enrolled Employees</span>
@@ -187,7 +215,7 @@ export default function PeopleAndAccess() {
         Policies and consent flows aren't counted in the overview and are not presented in the table below.
       </p>
 
-      {/* ---- Toolbar ---- */}
+      {/* Toolbar */}
       <div className="toolbar">
         <div className="search-box">
           <Search size={14} className="search-box__icon" />
@@ -200,35 +228,25 @@ export default function PeopleAndAccess() {
           />
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-          <button className="btn btn--outline">
-            <Filter size={14} /> Filter
-          </button>
-          <button className="btn btn--outline">
-            <Download size={14} /> Export
-          </button>
+          <button className="btn btn--outline"><Filter size={14} /> Filter</button>
+          <button className="btn btn--outline"><Download size={14} /> Export Access Logs</button>
         </div>
       </div>
 
-      {/* ---- Bulk action bar ---- */}
+      {/* Bulk action bar */}
       {selected.length > 0 && (
         <div className="bulk-action-bar">
           <span className="bulk-action-bar__count">{selected.length} Users Selected</span>
-          <button
-            className="btn btn--sm btn--outline"
-            onClick={() => alert(`Consent request sent to ${selected.length} user(s).`)}
-          >
+          <button className="btn btn--sm btn--outline"
+            onClick={() => openModal('consent', [...selected])}>
             <Mail size={13} /> Request consent
           </button>
-          <button
-            className="btn btn--sm btn--outline"
-            onClick={() => navigate('/people/enroll')}
-          >
+          <button className="btn btn--sm btn--outline"
+            onClick={() => openModal('enroll', [...selected])}>
             <UserPlus size={13} /> Invite to enroll
           </button>
-          <button
-            className="btn btn--sm btn--danger"
-            onClick={() => setShowDelete(true)}
-          >
+          <button className="btn btn--sm btn--danger"
+            onClick={() => openModal('delete', [...selected])}>
             <Trash2 size={13} /> Delete / offboard
           </button>
           <button className="bulk-action-bar__close" onClick={() => setSelected([])}>
@@ -237,82 +255,58 @@ export default function PeopleAndAccess() {
         </div>
       )}
 
-      {/* ---- Table ---- */}
+      {/* Table */}
       <div className="table-container">
         <table className="data-table">
           <thead>
             <tr>
               <th style={{ width: 40 }}>
-                <input
-                  type="checkbox"
-                  onChange={toggleAll}
+                <input type="checkbox" onChange={toggleAll}
                   checked={selected.length === filtered.length && filtered.length > 0}
-                  style={{ cursor: 'pointer' }}
-                />
+                  style={{ cursor: 'pointer' }} />
               </th>
               <th>User</th>
-              <th>
-                Type <ChevronsUpDown size={12} className="inline" style={{ color: '#a1a1a1' }} />
-              </th>
+              <th>Type <ChevronsUpDown size={12} className="inline" style={{ color: '#a1a1a1' }} /></th>
               <th>Employee ID</th>
-              <th>
-                Offering <ChevronsUpDown size={12} className="inline" style={{ color: '#a1a1a1' }} />
-              </th>
-              <th>
-                Consent <ChevronsUpDown size={12} className="inline" style={{ color: '#a1a1a1' }} />
-              </th>
+              <th>Offering <ChevronsUpDown size={12} className="inline" style={{ color: '#a1a1a1' }} /></th>
+              <th>Consent <ChevronsUpDown size={12} className="inline" style={{ color: '#a1a1a1' }} /></th>
               <th>State</th>
               <th style={{ width: 40 }} />
             </tr>
           </thead>
           <tbody>
             {filtered.map(person => (
-              <tr
-                key={person.id}
-                className={selected.includes(person.id) ? 'row--selected' : ''}
-              >
+              <tr key={person.id} className={selected.includes(person.id) ? 'row--selected' : ''}>
                 <td>
-                  <input
-                    type="checkbox"
-                    checked={selected.includes(person.id)}
-                    onChange={() => toggleSelect(person.id)}
-                    style={{ cursor: 'pointer' }}
-                  />
+                  <input type="checkbox" checked={selected.includes(person.id)}
+                    onChange={() => toggleSelect(person.id)} style={{ cursor: 'pointer' }} />
                 </td>
                 <td>
                   <div className="user-cell">
-                    <div className="user-avatar">
-                      {person.name.charAt(0)}
-                    </div>
+                    <div className="user-avatar">{person.name.charAt(0)}</div>
                     <span>{person.name}</span>
                   </div>
                 </td>
                 <td style={{ color: '#53565a' }}>{person.type}</td>
                 <td style={{ color: '#53565a' }}>{person.employeeId}</td>
                 <td style={{ color: '#53565a' }}>{person.offering}</td>
+                <td><ConsentDot consent={person.consent} /></td>
                 <td>
-                  <ConsentDot consent={person.consent} />
-                </td>
-                <td>
-                  <span className={`badge ${stateBadgeClass(person.state)}`}>
-                    {person.state}
-                  </span>
+                  <span className={`badge ${stateBadgeClass(person.state)}`}>{person.state}</span>
                 </td>
                 <td>
                   <div className="context-menu-wrapper">
-                    <button
-                      className="icon-btn"
-                      onClick={() =>
-                        setOpenMenuId(openMenuId === person.id ? null : person.id)
-                      }
-                    >
+                    <button className="icon-btn"
+                      onClick={() => setOpenMenuId(openMenuId === person.id ? null : person.id)}>
                       <MoreVertical size={16} />
                     </button>
                     {openMenuId === person.id && (
                       <ContextMenu
                         person={person}
                         onClose={() => setOpenMenuId(null)}
-                        onEnroll={() => navigate('/people/enroll')}
+                        onRequestConsent={() => openModal('consent', [person.id])}
+                        onInviteEnroll={() => openModal('enroll', [person.id])}
+                        onDelete={() => openModal('delete', [person.id])}
                       />
                     )}
                   </div>
@@ -323,27 +317,45 @@ export default function PeopleAndAccess() {
         </table>
       </div>
 
-      {/* ---- Pagination ---- */}
+      {/* Pagination */}
       <div className="pagination">
-        <span className="pagination__info">
-          Showing 1–{filtered.length} of {rows.length} users
-        </span>
+        <span className="pagination__info">Showing 1–{filtered.length} of {rows.length} users</span>
         <div className="pagination__controls">
           <button className="page-btn"><ChevronLeft size={14} /></button>
           {[1, 2, 3, 4, 5].map(p => (
-            <button key={p} className={`page-btn${p === 1 ? ' page-btn--active' : ''}`}>
-              {p}
-            </button>
+            <button key={p} className={`page-btn${p === 1 ? ' page-btn--active' : ''}`}>{p}</button>
           ))}
           <button className="page-btn"><ChevronRight size={14} /></button>
         </div>
       </div>
 
-      {/* ---- Delete confirm modal ---- */}
-      {showDelete && (
+      {/* Request consent modal */}
+      {modal === 'consent' && (
+        <InfoModal
+          title="Request consent"
+          body={`This sends a consent form (MS Teams) to ${count} selected ${count === 1 ? 'person' : 'persons'}. They'll show as "Consent requested" until they submit.`}
+          confirmLabel={`Send to ${count}`}
+          onCancel={closeModal}
+          onConfirm={handleConsentConfirm}
+        />
+      )}
+
+      {/* Invite to enroll modal */}
+      {modal === 'enroll' && (
+        <InfoModal
+          title="Invite to enroll"
+          body={`This emails ${count} consented ${count === 1 ? 'person' : 'persons'} to enroll with the office admin between Jun 23–27.`}
+          confirmLabel={`Invite ${count}`}
+          onCancel={closeModal}
+          onConfirm={handleEnrollConfirm}
+        />
+      )}
+
+      {/* Delete modal */}
+      {modal === 'delete' && (
         <DeleteModal
-          count={selected.length}
-          onCancel={() => setShowDelete(false)}
+          count={count}
+          onCancel={closeModal}
           onConfirm={handleDeleteConfirm}
         />
       )}

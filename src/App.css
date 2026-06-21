@@ -1035,6 +1035,79 @@ body {
   border-top: 1px solid #e2e8f0;
 }
 
+/* ===== INFO MODAL (Request consent / Invite to enroll) ===== */
+.modal--info {
+  width: 475px;
+  padding: 32px 32px 28px;
+  position: relative;
+  text-align: center;
+  border-radius: 8px;
+}
+
+.modal__close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #63666a;
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.modal__close:hover { background: #f2f2f3; }
+
+.modal__info-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #d6f3ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.modal__info-icon--danger {
+  background: #fce0dc;
+}
+
+.modal__info-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #000000;
+  margin-bottom: 12px;
+}
+
+.modal__info-body {
+  font-size: 14px;
+  color: #53565a;
+  line-height: 1.6;
+  margin-bottom: 28px;
+}
+
+.modal__info-footer {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.modal__info-footer .btn--outline {
+  min-width: 100px;
+}
+
+.modal__info-footer .btn--primary {
+  min-width: 100px;
+  background: #007cb0;
+}
+
+.modal__info-footer .btn--primary:hover {
+  background: #005a8c;
+}
+
 /* ===== ENROLL USER ===== */
 .breadcrumb {
   display: flex;
