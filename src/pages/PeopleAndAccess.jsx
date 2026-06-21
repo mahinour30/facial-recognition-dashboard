@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import {
   Search, Filter, Download, ChevronsUpDown,
   ChevronLeft, ChevronRight, UserPlus, MoreVertical,
-  X, Mail, Trash2, Eye, Pencil, Info,
+  X, Mail, Trash2, Eye, Pencil, Info, Send,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { people as initialPeople } from '../data/mockData';
@@ -35,6 +35,80 @@ function ConsentDot({ consent }) {
     <div className={`consent-dot consent-dot--${(consent || '').toLowerCase()}`}>
       <span className="consent-dot-icon" style={{ background: color }} />
       <span>{label}</span>
+    </div>
+  );
+}
+
+/* ---- User Details modal (shown after "Send to X" in Request Consent) ---- */
+function UserDetailsModal({ person, onClose, onRequestConsent }) {
+  const consentDotColor = {
+    Pending:   '#ed8b00',
+    Consented: '#43b02a',
+    Declined:  '#da291c',
+    Withdrawn: '#63666a',
+    'Not Sent':'#ed8b00',
+    '-':       '#a1a1a1',
+  };
+  const consentLabel = person.consent === '-' ? 'Not Sent' : person.consent;
+  const dotColor = consentDotColor[consentLabel] || '#a1a1a1';
+
+  return (
+    <div className="modal-backdrop">
+      <div className="modal modal--details">
+        <div className="modal-details__header">
+          <h2 className="modal-details__title">User Details</h2>
+          <button className="modal__close" onClick={onClose}><X size={18} /></button>
+        </div>
+        <div className="modal-details__grid">
+          <div className="modal-details__field">
+            <div className="modal-details__label">User name</div>
+            <div className="modal-details__value">{person.name}</div>
+          </div>
+          <div className="modal-details__field">
+            <div className="modal-details__label">Type</div>
+            <div className="modal-details__value">{person.type}</div>
+          </div>
+          <div className="modal-details__field">
+            <div className="modal-details__label">Sub-type</div>
+            <div className="modal-details__value">{person.offering || 'Client'}</div>
+          </div>
+          <div className="modal-details__field">
+            <div className="modal-details__label">Expiry Date</div>
+            <div className="modal-details__value">17th July, 2026</div>
+          </div>
+          <div className="modal-details__field">
+            <div className="modal-details__label">Consent</div>
+            <div className="modal-details__value">
+              <span className="consent-dot-inline">
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: dotColor, display: 'inline-block', marginRight: 6 }} />
+                {consentLabel}
+              </span>
+            </div>
+          </div>
+          <div className="modal-details__field">
+            <div className="modal-details__label">Status</div>
+            <div className="modal-details__value">
+              <span className="badge badge--not-enrolled">{person.state}</span>
+            </div>
+          </div>
+          <div className="modal-details__field">
+            <div className="modal-details__label">Consent Form Signed</div>
+            <div className="modal-details__value">V.2</div>
+          </div>
+          <div className="modal-details__field">
+            <div className="modal-details__label">Signed on</div>
+            <div className="modal-details__value">12 Jun 2026, 09:14</div>
+          </div>
+        </div>
+        <div className="modal-details__footer">
+          <button className="btn btn--outline" onClick={onRequestConsent}>
+            <Send size={13} /> Request consent
+          </button>
+          <button className="btn btn--outline">
+            <Pencil size={13} /> Edit info
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -86,7 +160,7 @@ function DeleteModal({ count, onCancel, onConfirm }) {
 }
 
 /* ---- Row context menu ---- */
-function ContextMenu({ person, onClose, onRequestConsent, onInviteEnroll, onDelete }) {
+function ContextMenu({ person, onClose, onViewProfile, onRequestConsent, onInviteEnroll, onDelete }) {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -99,7 +173,7 @@ function ContextMenu({ person, onClose, onRequestConsent, onInviteEnroll, onDele
 
   return (
     <div className="context-menu" ref={ref}>
-      <button className="context-menu__item">
+      <button className="context-menu__item" onClick={() => { onViewProfile(); onClose(); }}>
         <Eye size={14} /> View profile
       </button>
       <button className="context-menu__item">
@@ -124,9 +198,9 @@ export default function PeopleAndAccess() {
   const [selected, setSelected]       = useState([]);
   const [search, setSearch]           = useState('');
   const [openMenuId, setOpenMenuId]   = useState(null);
-  const [modal, setModal]             = useState(null); // 'consent' | 'enroll' | 'delete'
-  // When triggered from a single row (3-dot menu), store that person's id
+  const [modal, setModal]             = useState(null); // 'consent' | 'enroll' | 'delete' | 'userdetails'
   const [targetIds, setTargetIds]     = useState([]);
+  const [detailPerson, setDetailPerson] = useState(null);
   const navigate = useNavigate();
 
   const filtered = rows.filter(p =>
@@ -152,7 +226,14 @@ export default function PeopleAndAccess() {
       targetIds.includes(p.id) ? { ...p, consent: 'Pending', state: 'Consent Requested' } : p
     ));
     setSelected([]);
-    closeModal();
+    // After sending, open User Details for the first targeted person
+    const firstPerson = rows.find(p => p.id === targetIds[0]);
+    setModal(null);
+    setTargetIds([]);
+    if (firstPerson) {
+      setDetailPerson({ ...firstPerson, consent: 'Pending', state: 'Consent Requested' });
+      setModal('userdetails');
+    }
   };
 
   const handleEnrollConfirm = () => {
@@ -304,6 +385,7 @@ export default function PeopleAndAccess() {
                       <ContextMenu
                         person={person}
                         onClose={() => setOpenMenuId(null)}
+                        onViewProfile={() => { setDetailPerson(person); setModal('userdetails'); }}
                         onRequestConsent={() => openModal('consent', [person.id])}
                         onInviteEnroll={() => openModal('enroll', [person.id])}
                         onDelete={() => openModal('delete', [person.id])}
@@ -357,6 +439,18 @@ export default function PeopleAndAccess() {
           count={count}
           onCancel={closeModal}
           onConfirm={handleDeleteConfirm}
+        />
+      )}
+
+      {/* User Details modal */}
+      {modal === 'userdetails' && detailPerson && (
+        <UserDetailsModal
+          person={detailPerson}
+          onClose={closeModal}
+          onRequestConsent={() => {
+            closeModal();
+            openModal('consent', [detailPerson.id]);
+          }}
         />
       )}
     </div>

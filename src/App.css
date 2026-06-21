@@ -1108,6 +1108,69 @@ body {
   background: #005a8c;
 }
 
+/* ===== USER DETAILS MODAL ===== */
+.modal--details {
+  width: 620px;
+  padding: 0;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.modal-details__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+}
+
+.modal-details__title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #000000;
+}
+
+.modal-details__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px 32px;
+  padding: 0 24px 24px;
+}
+
+.modal-details__label {
+  font-size: 12px;
+  color: #63666a;
+  margin-bottom: 4px;
+}
+
+.modal-details__value {
+  font-size: 14px;
+  color: #000000;
+  font-weight: 400;
+}
+
+.consent-dot-inline {
+  display: inline-flex;
+  align-items: center;
+  font-size: 14px;
+  color: #000;
+}
+
+.modal-details__footer {
+  display: flex;
+  gap: 12px;
+  padding: 16px 24px 24px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.modal-details__footer .btn--outline {
+  color: #007cb0;
+  border-color: #007cb0;
+}
+
+.modal-details__footer .btn--outline:hover {
+  background: #d6f3ff;
+}
+
 /* ===== ENROLL USER ===== */
 .breadcrumb {
   display: flex;
