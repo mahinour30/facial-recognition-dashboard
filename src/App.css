@@ -858,6 +858,12 @@ body {
 .context-menu__item:hover { background: #f2f2f3; }
 .context-menu__item--danger { color: #b21e14; }
 .context-menu__item--danger:hover { background: #fce0dc; }
+.context-menu__item--disabled {
+  color: #a1a1a1 !important;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.context-menu__item--disabled:hover { background: transparent; }
 
 /* ===== PAGINATION ===== */
 .pagination {
