@@ -15,7 +15,7 @@ import {
   Pencil,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { people } from '../data/mockData';
+import { people as initialPeople } from '../data/mockData';
 
 /* ---- badge mapping per Figma enrollment states ---- */
 function stateBadgeClass(state) {
@@ -111,13 +111,14 @@ function DeleteModal({ count, onCancel, onConfirm }) {
 }
 
 export default function PeopleAndAccess() {
+  const [rows, setRows]              = useState(initialPeople);
   const [selected, setSelected]     = useState([]);
   const [search, setSearch]         = useState('');
   const [openMenuId, setOpenMenuId] = useState(null);
   const [showDelete, setShowDelete] = useState(false);
   const navigate = useNavigate();
 
-  const filtered = people.filter(p =>
+  const filtered = rows.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -130,6 +131,12 @@ export default function PeopleAndAccess() {
     setSelected(prev =>
       prev.length === filtered.length ? [] : filtered.map(p => p.id)
     );
+
+  const handleDeleteConfirm = () => {
+    setRows(prev => prev.filter(p => !selected.includes(p.id)));
+    setSelected([]);
+    setShowDelete(false);
+  };
 
   return (
     <div className="page">
@@ -206,7 +213,10 @@ export default function PeopleAndAccess() {
       {selected.length > 0 && (
         <div className="bulk-action-bar">
           <span className="bulk-action-bar__count">{selected.length} Users Selected</span>
-          <button className="btn btn--sm btn--outline">
+          <button
+            className="btn btn--sm btn--outline"
+            onClick={() => alert(`Consent request sent to ${selected.length} user(s).`)}
+          >
             <Mail size={13} /> Request consent
           </button>
           <button
@@ -316,7 +326,7 @@ export default function PeopleAndAccess() {
       {/* ---- Pagination ---- */}
       <div className="pagination">
         <span className="pagination__info">
-          Showing 1–{filtered.length} of {people.length} users
+          Showing 1–{filtered.length} of {rows.length} users
         </span>
         <div className="pagination__controls">
           <button className="page-btn"><ChevronLeft size={14} /></button>
@@ -334,10 +344,7 @@ export default function PeopleAndAccess() {
         <DeleteModal
           count={selected.length}
           onCancel={() => setShowDelete(false)}
-          onConfirm={() => {
-            setSelected([]);
-            setShowDelete(false);
-          }}
+          onConfirm={handleDeleteConfirm}
         />
       )}
     </div>
