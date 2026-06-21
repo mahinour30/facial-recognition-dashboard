@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { CheckCircle2, ArrowLeft, ArrowRight } from 'lucide-react';
+import { CheckCircle2, ArrowLeft, ArrowRight, Check } from 'lucide-react';
 
 /* ---- Step definitions (Figma: Consent → Identity → Capture → Confirm) ---- */
 const STEPS = [
@@ -9,6 +9,8 @@ const STEPS = [
   { id: 3, label: 'Capture' },
   { id: 4, label: 'Confirm' },
 ];
+
+const ANGLES = ['front', 'left', 'right'];
 
 /* ---- Step indicator ---- */
 function StepIndicator({ current }) {
@@ -104,17 +106,107 @@ function IdentityStep({ onNext, onBack }) {
 
 /* ===== STEP 3: Capture ===== */
 function CaptureStep({ onNext, onBack }) {
-  const [activeAngle, setActiveAngle] = useState('Front');
-  const [captured, setCaptured]       = useState({ Front: false, Left: false, Right: false });
+  const [activeAngle, setActiveAngle] = useState('front');
+  const [photos, setPhotos] = useState({ front: null, left: null, right: null });
+  const [previewAngle, setPreviewAngle] = useState(null);
+  const [cameraError, setCameraError] = useState(null);
+  const [faceCentered, setFaceCentered] = useState(false);
 
-  const handleCapture = () => {
-    setCaptured(prev => ({ ...prev, [activeAngle]: true }));
-    const angles = ['Front', 'Left', 'Right'];
-    const nextIdx = angles.indexOf(activeAngle) + 1;
-    if (nextIdx < angles.length) setActiveAngle(angles[nextIdx]);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const streamRef = useRef(null);
+
+  // Start camera on mount
+  useEffect(() => {
+    let cancelled = false;
+
+    navigator.mediaDevices
+      .getUserMedia({ video: { facingMode: 'user', width: 1280, height: 720 } })
+      .then((stream) => {
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCameraError('Camera access denied. Please allow camera access and reload.');
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+      }
+    };
+  }, []);
+
+  // Mock "face centered" after 2 seconds whenever we're on a new angle
+  useEffect(() => {
+    setFaceCentered(false);
+    const timer = setTimeout(() => setFaceCentered(true), 2000);
+    return () => clearTimeout(timer);
+  }, [activeAngle]);
+
+  const capturePhoto = () => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return null;
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', 0.9);
   };
 
-  const allCaptured = Object.values(captured).every(Boolean);
+  const handleNext = () => {
+    const allDone = ANGLES.every((a) => photos[a]);
+
+    if (allDone) {
+      onNext();
+      return;
+    }
+
+    const dataUrl = capturePhoto();
+    setPhotos((prev) => ({ ...prev, [activeAngle]: dataUrl }));
+
+    const currentIdx = ANGLES.indexOf(activeAngle);
+    const nextIdx = currentIdx + 1;
+
+    if (nextIdx < ANGLES.length) {
+      setActiveAngle(ANGLES[nextIdx]);
+      setPreviewAngle(null);
+    }
+  };
+
+  const handleAngleClick = (angle) => {
+    if (photos[angle]) {
+      setPreviewAngle(angle === previewAngle ? null : angle);
+    }
+  };
+
+  const allDone = ANGLES.every((a) => photos[a]);
+
+  const angleLabel = (a) => a.charAt(0).toUpperCase() + a.slice(1);
+
+  const nextBtnLabel = () => {
+    if (allDone) return 'Next';
+    return `Capture ${angleLabel(activeAngle)}`;
+  };
+
+  const getAngleState = (angle) => {
+    if (photos[angle]) return 'done';
+    if (angle === activeAngle) return 'active';
+    return 'pending';
+  };
+
+  const displayedPhoto = previewAngle ? photos[previewAngle] : photos[activeAngle];
+  const showPhoto = !!displayedPhoto && (previewAngle !== null || photos[activeAngle]);
 
   return (
     <div className="enroll-step">
@@ -124,61 +216,93 @@ function CaptureStep({ onNext, onBack }) {
         The frame is analyzed for quality, converted to a vector, and the image is discarded.
       </p>
 
+      {/* Hidden canvas for capture */}
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
+
       <div className="capture-layout">
-        {/* Angle selector */}
-        <div className="angle-selector">
-          {['Front', 'Left', 'Right'].map(angle => (
-            <button
-              key={angle}
-              className={`angle-btn${activeAngle === angle ? ' angle-btn--active' : ''}`}
-              onClick={() => setActiveAngle(angle)}
-            >
-              {captured[angle] && <CheckCircle2 size={14} style={{ marginRight: 4 }} />}
-              {angle}
-            </button>
-          ))}
+        {/* Camera / photo view */}
+        <div className="capture-camera-wrap">
+          {cameraError ? (
+            <div className="capture-error">{cameraError}</div>
+          ) : (
+            <>
+              {showPhoto ? (
+                <img
+                  src={displayedPhoto}
+                  alt={`${activeAngle} capture`}
+                  className="capture-photo-preview"
+                />
+              ) : (
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="capture-video"
+                />
+              )}
+
+              {/* Oval guide — always visible unless photo overlay covering */}
+              {!showPhoto && <div className="capture-oval" />}
+
+              {/* Green done overlay when showing captured photo */}
+              {showPhoto && (
+                <div className="capture-done-overlay">
+                  <Check size={48} color="#fff" strokeWidth={3} />
+                </div>
+              )}
+
+              {/* Status bar */}
+              <div className="capture-status-bar">
+                <span className="capture-status-item capture-status-item--ok">
+                  ✓ Lighting good
+                </span>
+                <span className="capture-status-item capture-status-item--ok">
+                  ✓ Single face detected
+                </span>
+                <span
+                  className={`capture-status-item ${
+                    faceCentered
+                      ? 'capture-status-item--ok'
+                      : 'capture-status-item--pending'
+                  }`}
+                >
+                  {faceCentered ? '✓' : '↺'} Face centered
+                </span>
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Camera view */}
-        <div className="camera-view">
-          <div className="face-outline" />
-          <div className="capture-status">
-            <span className="capture-check">✓ Lighting good</span>
-            <span className="capture-check">✓ Single face detected</span>
-            <span style={{ color: captured[activeAngle] ? '#43b02a' : '#a1a1a1' }}>
-              {captured[activeAngle] ? '✓ Captured' : '↺ Align face'}
-            </span>
-          </div>
-          {/* Angle label */}
-          <div style={{
-            position: 'absolute',
-            top: 10, left: 12,
-            fontSize: 11,
-            color: 'rgba(255,255,255,0.7)',
-            fontWeight: 600,
-          }}>
-            {activeAngle} View
-          </div>
-          {/* Capture button */}
-          <button
-            onClick={handleCapture}
-            style={{
-              position: 'absolute',
-              bottom: 10,
-              right: 12,
-              background: '#007cb0',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 4,
-              padding: '4px 12px',
-              fontSize: 12,
-              cursor: 'pointer',
-              fontWeight: 600,
-              fontFamily: 'inherit',
-            }}
-          >
-            Capture
-          </button>
+        {/* Angle selector column */}
+        <div className="capture-angles">
+          {ANGLES.map((angle) => {
+            const state = getAngleState(angle);
+            return (
+              <div
+                key={angle}
+                className="angle-item"
+                onClick={() => handleAngleClick(angle)}
+                title={photos[angle] ? `View ${angleLabel(angle)} capture` : undefined}
+              >
+                <div className={`angle-circle angle-circle--${state}`}>
+                  {state === 'active' && <div className="angle-circle__dot" />}
+                  {state === 'done' && <Check size={18} color="#fff" />}
+                </div>
+                <span
+                  className={`angle-label${
+                    state === 'active'
+                      ? ' angle-label--active'
+                      : state === 'done'
+                      ? ' angle-label--done'
+                      : ''
+                  }`}
+                >
+                  {angleLabel(angle)}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -188,11 +312,10 @@ function CaptureStep({ onNext, onBack }) {
         </button>
         <button
           className="btn btn--primary"
-          onClick={onNext}
-          disabled={!allCaptured}
-          style={{ opacity: allCaptured ? 1 : 0.5 }}
+          onClick={handleNext}
+          disabled={!!cameraError && !allDone}
         >
-          Next <ArrowRight size={14} />
+          {nextBtnLabel()} {!allDone && <ArrowRight size={14} />}
         </button>
       </div>
     </div>
