@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Layout from './components/shell/Layout'
+import Dashboard from './pages/Dashboard'
 import TokenSwatch from './pages/TokenSwatch'
 import PeopleAccess from './pages/PeopleAccess'
 import EnrollWizard from './pages/EnrollWizard'
@@ -16,7 +17,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route element={<Layout />}>
-          <Route index element={<Placeholder title="Dashboard" />} />
+          <Route index element={<Dashboard />} />
           <Route path="alerts" element={<Placeholder title="Alerts" />} />
           <Route path="people" element={<PeopleAccess />} />
           <Route path="people/enroll" element={<EnrollWizard />} />
