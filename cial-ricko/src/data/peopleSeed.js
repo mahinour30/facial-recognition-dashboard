@@ -1,0 +1,16 @@
+export const PEOPLE_SEED = [
+  { id: 1, name: 'Ashraf, Salma', type: 'Employee', subtype: null, offering: 'Customer', employeeId: '20230594', email: 'salma@co.com', expiry: null, consent: 'Not Sent', state: 'Not Enrolled' },
+  { id: 2, name: 'John, Samy', type: 'Employee', subtype: null, offering: 'Customer', employeeId: '20230598', email: 'samy@co.com', expiry: null, consent: 'Pending', state: 'Consent Requested' },
+  { id: 3, name: 'Salem, Sandra', type: 'Employee', subtype: null, offering: 'Customer', employeeId: '20230902', email: 'sandra@co.com', expiry: null, consent: 'Consented', state: 'Ready to enroll' },
+  { id: 4, name: 'Ashraf, Peter', type: 'Employee', subtype: null, offering: 'Engineering', employeeId: '20230603', email: 'peter@co.com', expiry: null, consent: 'Consented', state: 'Awaiting Capture' },
+  { id: 5, name: 'Hammam, Mahmour', type: 'Employee', subtype: null, offering: 'Cyber Security', employeeId: '20230903', email: 'mahmour@co.com', expiry: null, consent: 'Consented', state: 'Enrolled / Active' },
+  { id: 6, name: 'Mikhail, Rafik', type: 'Employee', subtype: null, offering: 'Customer', employeeId: '20230605', email: 'rafik@co.com', expiry: null, consent: 'Consented', state: 'Pending re-enrollment' },
+  { id: 7, name: 'Ashraf, Ashrafat', type: 'Employee', subtype: null, offering: 'Engineering', employeeId: '20230605', email: 'ashrafat@co.com', expiry: null, consent: 'Declined', state: 'Not Enrolled' },
+  { id: 8, name: 'Youssef, Shaker', type: 'Employee', subtype: null, offering: 'AI & Data', employeeId: '20230605', email: 'shaker@co.com', expiry: null, consent: 'Not Sent', state: 'Not Enrolled' },
+  { id: 9, name: 'Ali, Hassan', type: 'Visitor', subtype: 'Bank', offering: null, employeeId: null, email: 'hassan@bank.com', expiry: '2026-07-17', consent: 'Consented', state: 'Enrolled / Active' },
+  { id: 10, name: 'Sam, Gambel', type: 'Visitor', subtype: 'Client', offering: null, employeeId: null, email: 'sam@client.com', expiry: '2026-07-17', consent: 'Pending', state: 'Consent Requested' },
+  { id: 11, name: 'John, Rosie', type: 'Visitor', subtype: 'Client', offering: null, employeeId: null, email: 'rosie@client.com', expiry: '2026-07-17', consent: 'Consented', state: 'Enrolled / Active' },
+  { id: 12, name: 'Omar, Saeed', type: 'Outsource', subtype: 'Consultant', offering: null, employeeId: null, email: 'omar@out.com', expiry: '2026-06-01', consent: 'Consented', state: 'Expired' },
+  { id: 13, name: 'Maya, Khalil', type: 'Outsource', subtype: 'Cleaning', offering: null, employeeId: null, email: 'maya@out.com', expiry: '2026-08-01', consent: 'Declined', state: 'Not Enrolled' },
+  { id: 14, name: 'Nour, Hassan', type: 'Employee', subtype: null, offering: 'Engineering', employeeId: '20230611', email: 'nour@co.com', expiry: null, consent: 'Withdrawn', state: 'Deletion requested' },
+]

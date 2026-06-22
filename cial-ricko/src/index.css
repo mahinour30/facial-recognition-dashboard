@@ -1,0 +1,5 @@
+@import "./tokens.css";
+@import "tailwindcss";
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body,#root{height:100%;}
+body{font-family:var(--font-family);font-size:var(--type-body-regular-size);line-height:var(--type-body-regular-line);font-weight:var(--type-body-regular-weight);background:var(--page-bg);color:var(--text-title-primary);}
