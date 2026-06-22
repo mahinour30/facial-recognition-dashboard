@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Layout from './components/shell/Layout'
 import TokenSwatch from './pages/TokenSwatch'
+import PeopleAccess from './pages/PeopleAccess'
+import EnrollWizard from './pages/EnrollWizard'
 
 const Placeholder = ({ title }) => (
   <div>
@@ -16,7 +18,8 @@ export default function App() {
         <Route element={<Layout />}>
           <Route index element={<Placeholder title="Dashboard" />} />
           <Route path="alerts" element={<Placeholder title="Alerts" />} />
-          <Route path="people/*" element={<Placeholder title="People & Access" />} />
+          <Route path="people" element={<PeopleAccess />} />
+          <Route path="people/enroll" element={<EnrollWizard />} />
           <Route path="access-log" element={<Placeholder title="Access Log" />} />
           <Route path="tokens" element={<TokenSwatch />} />
         </Route>
