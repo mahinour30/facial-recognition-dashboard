@@ -4,6 +4,8 @@ import Dashboard from './pages/Dashboard'
 import TokenSwatch from './pages/TokenSwatch'
 import PeopleAccess from './pages/PeopleAccess'
 import EnrollWizard from './pages/EnrollWizard'
+import Alerts from './pages/Alerts'
+import AccessLog from './pages/AccessLog'
 
 const Placeholder = ({ title }) => (
   <div>
@@ -18,10 +20,10 @@ export default function App() {
       <Routes>
         <Route element={<Layout />}>
           <Route index element={<Dashboard />} />
-          <Route path="alerts" element={<Placeholder title="Alerts" />} />
+          <Route path="alerts" element={<Alerts />} />
           <Route path="people" element={<PeopleAccess />} />
           <Route path="people/enroll" element={<EnrollWizard />} />
-          <Route path="access-log" element={<Placeholder title="Access Log" />} />
+          <Route path="access-log" element={<AccessLog />} />
           <Route path="tokens" element={<TokenSwatch />} />
         </Route>
       </Routes>
