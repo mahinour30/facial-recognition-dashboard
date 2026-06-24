@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, CheckmarkFilled, CheckmarkOutline, CircleDash, Camera } from '@carbon/icons-react'
+import { ArrowLeft, ArrowRight, CheckmarkFilled, CheckmarkOutline, CircleDash, Camera, Upload } from '@carbon/icons-react'
 import { useStore } from '../store/useStore'
 
 const STEPS = ['Consent', 'Identity', 'Capture', 'Confirm']
@@ -36,7 +36,10 @@ function Stepper({ current }) {
 
 function CaptureStep({ person, onNext, onBack, onEnrollmentComplete }) {
   const startLiveEnrollment = useStore(s => s.startLiveEnrollment)
+  const enrollFromFiles     = useStore(s => s.enrollFromFiles)
   const updatePerson        = useStore(s => s.updatePerson)
+
+  // Live camera state
   const [angleIdx, setAngleIdx] = useState(0)
   const [captures, setCaptures] = useState({ Front: null, Left: null, Right: null })
   const [analyzing, setAnalyzing] = useState(false)
@@ -45,6 +48,14 @@ function CaptureStep({ person, onNext, onBack, onEnrollmentComplete }) {
   const [wsFeedback, setWsFeedback] = useState(null)
   const [wsEnrolled, setWsEnrolled] = useState(false)
   const [wsError, setWsError] = useState(null)
+
+  // Photo upload fallback state
+  const [uploadMode, setUploadMode] = useState(false)   // true when camera denied or user switches
+  const [uploadFiles, setUploadFiles] = useState([])    // File[] selected by user
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState(null)
+  const fileInputRef = useRef(null)
+
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
   const streamRef = useRef(null)
@@ -80,7 +91,7 @@ function CaptureStep({ person, onNext, onBack, onEnrollmentComplete }) {
           onError: (msg) => setWsError(msg),
         })
       })
-      .catch(() => setCamError('Camera access denied. Please allow camera access and reload.'))
+      .catch(() => { setCamError('Camera access denied.'); setUploadMode(true) })
     setTimeout(() => setQualityOk(true), 2000)
     return () => {
       if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop())
@@ -106,17 +117,96 @@ function CaptureStep({ person, onNext, onBack, onEnrollmentComplete }) {
     }
   }
 
+  // POST /create_employee with selected files
+  const handleFileUpload = async () => {
+    if (!uploadFiles.length) return
+    setUploading(true)
+    setUploadError(null)
+    const backendId = person.employeeId
+      ? String(person.employeeId)
+      : `${person.type?.charAt(0).toUpperCase() || 'X'}${person.id}`
+    try {
+      const result = await enrollFromFiles(person.id, backendId, person.name, uploadFiles)
+      // enrollFromFiles updates the store internally; notify parent for Confirm step
+      onEnrollmentComplete({ prototypes: result.prototypes, source: 'file' })
+      setWsEnrolled(true) // reuse this flag to enable Next button
+    } catch (err) {
+      setUploadError(err.message || 'Upload failed. Check that the server is running.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
   const allDone = wsEnrolled || ANGLES.every(a => captures[a])
   const currentAngle = ANGLES[angleIdx]
   const btnLabel = analyzing ? 'Analyzing…' : allDone ? 'Next →' : 'Capture ' + currentAngle
+
+  // ── Upload mode UI (shown when camera denied or user switches) ──
+  const uploadUI = (
+    <div style={{ border: '1px solid var(--stroke-default)', borderRadius: 'var(--radius-md)', padding: 'var(--space-5)' }}>
+      {camError && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-4)', padding: 'var(--space-3)', background: 'var(--tag-red-bg)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--type-label-regular-size)', color: 'var(--tag-red-fg)' }}>
+          {camError} Using photo upload instead.
+        </div>
+      )}
+      <p style={{ fontSize: 'var(--type-body-regular-size)', color: 'var(--text-body-tertiary)', marginBottom: 'var(--space-4)' }}>
+        Upload one or more face photos (JPEG or PNG, max 10 MB each). The server will extract and store the face vector — no images are retained.
+      </p>
+
+      {/* Drop zone / file picker */}
+      <div
+        onClick={() => fileInputRef.current?.click()}
+        style={{ border: '2px dashed var(--stroke-default)', borderRadius: 'var(--radius-md)', padding: 'var(--space-6)', textAlign: 'center', cursor: 'pointer', background: uploadFiles.length ? 'var(--tag-green-bg)' : 'var(--surface-tertiary)', transition: 'background 0.15s' }}
+      >
+        <Upload size={24} style={{ color: 'var(--text-body-tertiary)', marginBottom: 'var(--space-2)' }} />
+        <div style={{ fontSize: 'var(--type-body-semibold-size)', fontWeight: 600, color: 'var(--text-title-primary)' }}>
+          {uploadFiles.length ? `${uploadFiles.length} photo${uploadFiles.length > 1 ? 's' : ''} selected` : 'Click to select photos'}
+        </div>
+        <div style={{ fontSize: 'var(--type-label-regular-size)', color: 'var(--text-body-tertiary)', marginTop: 'var(--space-1)' }}>
+          {uploadFiles.length
+            ? Array.from(uploadFiles).map(f => f.name).join(', ')
+            : 'JPEG or PNG · max 10 MB each · at least 1 required'}
+        </div>
+      </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png"
+        multiple
+        style={{ display: 'none' }}
+        onChange={e => { setUploadFiles(Array.from(e.target.files)); setUploadError(null) }}
+      />
+
+      {uploadError && (
+        <div style={{ marginTop: 'var(--space-3)', padding: 'var(--space-2) var(--space-3)', background: 'var(--tag-red-bg)', color: 'var(--tag-red-fg)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--type-label-regular-size)' }}>
+          {uploadError}
+        </div>
+      )}
+
+      {wsEnrolled && (
+        <div style={{ marginTop: 'var(--space-3)', display: 'flex', alignItems: 'center', gap: 'var(--space-2)', color: 'var(--status-success)', fontSize: 'var(--type-label-semibold-size)', fontWeight: 600 }}>
+          <CheckmarkFilled size={16} /> Photos enrolled successfully via server
+        </div>
+      )}
+    </div>
+  )
 
   return (
     <div>
       <h2 style={{ fontSize: 'var(--type-heading-5-size)', fontWeight: 'var(--type-heading-5-weight)', marginBottom: 'var(--space-2)' }}>Capture face</h2>
       <p style={{ color: 'var(--text-body-tertiary)', marginBottom: 'var(--space-4)' }}>Three-shot capture. The frame is analyzed for quality, converted to a vector, and the image is discarded.</p>
-      {wsError && <div style={{ color: 'var(--status-warning)', fontSize: 'var(--type-label-regular-size)', marginBottom: 'var(--space-2)', padding: 'var(--space-2) var(--space-3)', background: 'var(--tag-yellow-bg)', borderRadius: 'var(--radius-sm)' }}>WebSocket: {wsError} — manual capture still available.</div>}
-      {camError ? <div style={{ color: 'var(--status-danger)', padding: 'var(--space-4)', textAlign: 'center' }}>{camError}</div> : (
-        <div style={{ display: 'flex', gap: 'var(--space-4)' }}>
+
+      {/* WebSocket error banner + switch option */}
+      {wsError && !uploadMode && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-3)', padding: 'var(--space-2) var(--space-3)', background: 'var(--tag-orange-bg)', borderRadius: 'var(--radius-sm)', fontSize: 'var(--type-label-regular-size)', color: 'var(--tag-orange-fg)' }}>
+          <span>Live enrollment server unavailable — {wsError}</span>
+          <button onClick={() => setUploadMode(true)} style={{ background: 'none', border: '1px solid var(--tag-orange-fg)', borderRadius: 'var(--radius-sm)', color: 'var(--tag-orange-fg)', cursor: 'pointer', fontSize: 'var(--type-label-semibold-size)', fontWeight: 600, padding: '2px 10px', whiteSpace: 'nowrap', marginLeft: 'var(--space-3)' }}>
+            Upload photos instead
+          </button>
+        </div>
+      )}
+
+      {uploadMode ? uploadUI : (<div style={{ display: 'flex', gap: 'var(--space-4)' }}>
           {/* Camera view */}
           <div style={{ flex: 1, background: '#000', borderRadius: 'var(--radius-md)', overflow: 'hidden', position: 'relative', minHeight: 280 }}>
             {captures[currentAngle] && captures[currentAngle] !== 'done'
@@ -156,17 +246,33 @@ function CaptureStep({ person, onNext, onBack, onEnrollmentComplete }) {
               )
             })}
           </div>
-        </div>
-      )}
+        </div>)}
       <canvas ref={canvasRef} style={{ display: 'none' }} />
+
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 'var(--space-5)', paddingTop: 'var(--space-4)', borderTop: '1px solid var(--stroke-default)' }}>
         <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)', padding: 'var(--space-2) var(--space-4)', border: '1px solid var(--stroke-default)', borderRadius: 'var(--radius-sm)', background: 'var(--surface-primary)', cursor: 'pointer', fontSize: 'var(--type-body-regular-size)' }}>
           <ArrowLeft size={16} /> Back
         </button>
-        <button onClick={allDone ? onNext : captureAngle} disabled={analyzing}
-          style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)', padding: 'var(--space-2) var(--space-4)', border: 'none', borderRadius: 'var(--radius-sm)', background: analyzing ? 'var(--state-disabled)' : 'var(--button-primary)', color: '#fff', cursor: analyzing ? 'not-allowed' : 'pointer', fontSize: 'var(--type-body-semibold-size)', fontWeight: 'var(--type-body-semibold-weight)' }}>
-          {btnLabel} {!analyzing && !allDone && <Camera size={16} />} {allDone && <ArrowRight size={16} />}
-        </button>
+
+        {uploadMode ? (
+          // Upload mode: Enroll with photos OR Next (if already uploaded)
+          allDone ? (
+            <button onClick={onNext} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)', padding: 'var(--space-2) var(--space-4)', border: 'none', borderRadius: 'var(--radius-sm)', background: 'var(--button-primary)', color: '#fff', cursor: 'pointer', fontSize: 'var(--type-body-semibold-size)', fontWeight: 'var(--type-body-semibold-weight)' }}>
+              Next <ArrowRight size={16} />
+            </button>
+          ) : (
+            <button onClick={handleFileUpload} disabled={!uploadFiles.length || uploading}
+              style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)', padding: 'var(--space-2) var(--space-4)', border: 'none', borderRadius: 'var(--radius-sm)', background: (!uploadFiles.length || uploading) ? 'var(--state-disabled)' : 'var(--button-primary)', color: '#fff', cursor: (!uploadFiles.length || uploading) ? 'not-allowed' : 'pointer', fontSize: 'var(--type-body-semibold-size)', fontWeight: 'var(--type-body-semibold-weight)' }}>
+              <Upload size={16} /> {uploading ? 'Enrolling…' : 'Enroll with photos'}
+            </button>
+          )
+        ) : (
+          // Live camera mode
+          <button onClick={allDone ? onNext : captureAngle} disabled={analyzing}
+            style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)', padding: 'var(--space-2) var(--space-4)', border: 'none', borderRadius: 'var(--radius-sm)', background: analyzing ? 'var(--state-disabled)' : 'var(--button-primary)', color: '#fff', cursor: analyzing ? 'not-allowed' : 'pointer', fontSize: 'var(--type-body-semibold-size)', fontWeight: 'var(--type-body-semibold-weight)' }}>
+            {btnLabel} {!analyzing && !allDone && <Camera size={16} />} {allDone && <ArrowRight size={16} />}
+          </button>
+        )}
       </div>
     </div>
   )
