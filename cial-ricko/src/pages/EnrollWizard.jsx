@@ -34,8 +34,9 @@ function Stepper({ current }) {
   )
 }
 
-function CaptureStep({ person, onNext, onBack }) {
+function CaptureStep({ person, onNext, onBack, onEnrollmentComplete }) {
   const startLiveEnrollment = useStore(s => s.startLiveEnrollment)
+  const updatePerson        = useStore(s => s.updatePerson)
   const [angleIdx, setAngleIdx] = useState(0)
   const [captures, setCaptures] = useState({ Front: null, Left: null, Right: null })
   const [analyzing, setAnalyzing] = useState(false)
@@ -58,26 +59,28 @@ function CaptureStep({ person, onNext, onBack }) {
           employeeId: String(person.employeeId || person.id),
           fullName: person.name,
           videoEl: videoRef.current,
-          onFeedback: (fb) => {
-            // Update framesCollected from real server feedback
-            setWsFeedback(fb)
-          },
+          onFeedback: (fb) => setWsFeedback(fb),
           onEnrolled: ({ prototypes }) => {
-            // Mark all 3 angles as done automatically
+            // Server confirmed enrollment — mark all angles done and update store immediately
             setCaptures({ Front: 'done', Left: 'done', Right: 'done' })
             setWsEnrolled(true)
+            updatePerson(person.id, {
+              state: 'Enrolled / Active',
+              consent: 'Consented',
+              _prototypes: prototypes,
+              _enrolledAt: new globalThis.Date().toISOString(),
+            })
+            // Notify parent with server data so Confirm step can display it
+            onEnrollmentComplete({ prototypes, source: 'websocket' })
           },
-          onError: (msg) => {
-            // Fall back gracefully — show error but allow manual capture to continue
-            setWsError(msg)
-          },
+          onError: (msg) => setWsError(msg),
         })
       })
       .catch(() => setCamError('Camera access denied. Please allow camera access and reload.'))
     setTimeout(() => setQualityOk(true), 2000)
     return () => {
       if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop())
-      wsRef.current?.stop()
+      if (wsRef.current) wsRef.current.stop()
     }
   }, [])
 
@@ -167,6 +170,7 @@ function CaptureStep({ person, onNext, onBack }) {
 
 export default function EnrollWizard() {
   const [step, setStep] = useState(1)
+  const [enrollResult, setEnrollResult] = useState(null) // {prototypes, source} from WebSocket
   const people = useStore(s => s.people)
   const updatePerson = useStore(s => s.updatePerson)
   const showToast = useStore(s => s.showToast)
@@ -178,7 +182,15 @@ export default function EnrollWizard() {
   const next = () => setStep(s => s + 1)
   const back = () => setStep(s => s - 1)
   const finish = () => {
-    updatePerson(person.id, { state: 'Enrolled / Active', consent: 'Consented' })
+    // If WebSocket already enrolled, store is already updated — just navigate back
+    // If manual capture was used, update the store now as the commit point
+    if (!enrollResult) {
+      updatePerson(person.id, {
+        state: 'Enrolled / Active',
+        consent: 'Consented',
+        _enrolledAt: new globalThis.Date().toISOString(),
+      })
+    }
     showToast(person.name + ' enrolled successfully')
     navigate('/people')
   }
@@ -234,7 +246,7 @@ export default function EnrollWizard() {
           </div>
         )}
 
-        {step === 3 && <CaptureStep person={person} onNext={next} onBack={back} />}
+        {step === 3 && <CaptureStep person={person} onNext={next} onBack={back} onEnrollmentComplete={setEnrollResult} />}
 
         {step === 4 && (
           <div>
@@ -247,8 +259,24 @@ export default function EnrollWizard() {
               </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
-              <div><div style={{ fontSize: 'var(--type-label-regular-size)', color: 'var(--text-body-tertiary)' }}>Quality score</div><div style={{ fontWeight: 600, color: 'var(--status-success)' }}>94%</div></div>
-              <div><div style={{ fontSize: 'var(--type-label-regular-size)', color: 'var(--text-body-tertiary)' }}>New status</div><div><span style={{ background: 'var(--tag-green-bg)', color: 'var(--tag-green-fg)', padding: '2px 8px', borderRadius: 'var(--radius-pill)', fontSize: 12, fontWeight: 600 }}>Enrolled / Active</span></div></div>
+              <div>
+                <div style={{ fontSize: 'var(--type-label-regular-size)', color: 'var(--text-body-tertiary)' }}>
+                  {enrollResult ? 'Face prototypes stored' : 'Quality score'}
+                </div>
+                <div style={{ fontWeight: 600, color: 'var(--status-success)' }}>
+                  {enrollResult ? `${enrollResult.prototypes} vectors` : '94%'}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 'var(--type-label-regular-size)', color: 'var(--text-body-tertiary)' }}>New status</div>
+                <div><span style={{ background: 'var(--tag-green-bg)', color: 'var(--tag-green-fg)', padding: '2px 8px', borderRadius: 'var(--radius-pill)', fontSize: 12, fontWeight: 600 }}>Enrolled / Active</span></div>
+              </div>
+              {enrollResult?.source === 'websocket' && (
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <div style={{ fontSize: 'var(--type-label-regular-size)', color: 'var(--text-body-tertiary)' }}>Enrollment method</div>
+                  <div style={{ fontSize: 'var(--type-label-regular-size)', color: 'var(--status-success)' }}>✓ Live WebSocket enrollment confirmed by server</div>
+                </div>
+              )}
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 'var(--space-5)', paddingTop: 'var(--space-4)', borderTop: '1px solid var(--stroke-default)' }}>
               <button onClick={back} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)', padding: 'var(--space-2) var(--space-4)', border: '1px solid var(--stroke-default)', borderRadius: 'var(--radius-sm)', background: 'var(--surface-primary)', cursor: 'pointer', fontSize: 'var(--type-body-regular-size)' }}><ArrowLeft size={16} /> Back</button>

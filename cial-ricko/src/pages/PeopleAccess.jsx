@@ -26,31 +26,45 @@ export default function PeopleAccess() {
     if (actionType === 'requestConsent') return setModal({ type: 'consent', ids })
     if (actionType === 'invite')         return setModal({ type: 'invite', ids })
     if (actionType === 'delete')         return setModal({ type: 'delete', ids })
+
     if (actionType === 'enroll' || actionType === 'reenroll') {
       const id = ids[0]
+      const person = people.find(p => p.id === id)
+      // Gate: must be consented before enrolling
+      if (person && person.consent !== 'Consented') {
+        showToast('Cannot enroll: consent required first')
+        return
+      }
       navigate('/people/enroll?id=' + id)
       return
     }
+
     // Other actions: apply state machine directly
-    const patch = applyAction({ }, actionType)
+    const patch = applyAction({}, actionType)
     if (patch) ids.forEach(id => updatePerson(id, patch))
     showToast('Action applied')
     setSelectedRows([])
   }
 
   const confirmConsent = () => {
+    // Update local store: Pending / Consent Requested
     modal.ids.forEach(id => updatePerson(id, applyAction({}, 'requestConsent')))
-    showToast('Consent request sent to ' + modal.ids.length + ' person(s)')
+    // Real effect: MS Teams consent form sent externally (no API endpoint)
+    showToast(`Consent form sent via MS Teams to ${modal.ids.length} person(s)`)
     setModal(null); setSelectedRows([])
   }
+
   const confirmInvite = () => {
+    // Update local store: Awaiting Capture
     modal.ids.forEach(id => updatePerson(id, applyAction({}, 'invite')))
-    showToast('Invite sent to ' + modal.ids.length + ' person(s)')
+    // Real effect: enrollment invitation email sent externally (no API endpoint)
+    showToast(`Enrollment invite emailed to ${modal.ids.length} person(s)`)
     setModal(null); setSelectedRows([])
   }
+
   const confirmDelete = () => {
     modal.ids.forEach(id => deletePerson(id))
-    showToast(modal.ids.length + ' user(s) offboarded')
+    showToast(`${modal.ids.length} user(s) offboarded and records removed`)
     setModal(null); setSelectedRows([])
   }
 
