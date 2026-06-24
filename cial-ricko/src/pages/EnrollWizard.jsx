@@ -55,8 +55,12 @@ function CaptureStep({ person, onNext, onBack, onEnrollmentComplete }) {
       .then(stream => {
         streamRef.current = stream
         if (videoRef.current) videoRef.current.srcObject = stream
+        // Use employeeId for employees; generate a stable prefixed ID for Visitors/Outsource
+        const backendId = person.employeeId
+          ? String(person.employeeId)
+          : `${person.type?.charAt(0).toUpperCase() || 'X'}${person.id}`
         wsRef.current = startLiveEnrollment({
-          employeeId: String(person.employeeId || person.id),
+          employeeId: backendId,
           fullName: person.name,
           videoEl: videoRef.current,
           onFeedback: (fb) => setWsFeedback(fb),
