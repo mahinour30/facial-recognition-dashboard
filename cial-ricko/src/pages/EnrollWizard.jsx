@@ -35,21 +35,50 @@ function Stepper({ current }) {
 }
 
 function CaptureStep({ person, onNext, onBack }) {
+  const startLiveEnrollment = useStore(s => s.startLiveEnrollment)
   const [angleIdx, setAngleIdx] = useState(0)
   const [captures, setCaptures] = useState({ Front: null, Left: null, Right: null })
   const [analyzing, setAnalyzing] = useState(false)
   const [qualityOk, setQualityOk] = useState(false)
   const [camError, setCamError] = useState(null)
+  const [wsFeedback, setWsFeedback] = useState(null)
+  const [wsEnrolled, setWsEnrolled] = useState(false)
+  const [wsError, setWsError] = useState(null)
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
   const streamRef = useRef(null)
+  const wsRef = useRef(null)
 
   useEffect(() => {
     navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
-      .then(stream => { streamRef.current = stream; if (videoRef.current) videoRef.current.srcObject = stream })
+      .then(stream => {
+        streamRef.current = stream
+        if (videoRef.current) videoRef.current.srcObject = stream
+        wsRef.current = startLiveEnrollment({
+          employeeId: String(person.employeeId || person.id),
+          fullName: person.name,
+          videoEl: videoRef.current,
+          onFeedback: (fb) => {
+            // Update framesCollected from real server feedback
+            setWsFeedback(fb)
+          },
+          onEnrolled: ({ prototypes }) => {
+            // Mark all 3 angles as done automatically
+            setCaptures({ Front: 'done', Left: 'done', Right: 'done' })
+            setWsEnrolled(true)
+          },
+          onError: (msg) => {
+            // Fall back gracefully — show error but allow manual capture to continue
+            setWsError(msg)
+          },
+        })
+      })
       .catch(() => setCamError('Camera access denied. Please allow camera access and reload.'))
     setTimeout(() => setQualityOk(true), 2000)
-    return () => { if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop()) }
+    return () => {
+      if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop())
+      wsRef.current?.stop()
+    }
   }, [])
 
   const captureAngle = () => {
@@ -70,7 +99,7 @@ function CaptureStep({ person, onNext, onBack }) {
     }
   }
 
-  const allDone = ANGLES.every(a => captures[a])
+  const allDone = wsEnrolled || ANGLES.every(a => captures[a])
   const currentAngle = ANGLES[angleIdx]
   const btnLabel = analyzing ? 'Analyzing…' : allDone ? 'Next →' : 'Capture ' + currentAngle
 
@@ -78,11 +107,12 @@ function CaptureStep({ person, onNext, onBack }) {
     <div>
       <h2 style={{ fontSize: 'var(--type-heading-5-size)', fontWeight: 'var(--type-heading-5-weight)', marginBottom: 'var(--space-2)' }}>Capture face</h2>
       <p style={{ color: 'var(--text-body-tertiary)', marginBottom: 'var(--space-4)' }}>Three-shot capture. The frame is analyzed for quality, converted to a vector, and the image is discarded.</p>
+      {wsError && <div style={{ color: 'var(--status-warning)', fontSize: 'var(--type-label-regular-size)', marginBottom: 'var(--space-2)', padding: 'var(--space-2) var(--space-3)', background: 'var(--tag-yellow-bg)', borderRadius: 'var(--radius-sm)' }}>WebSocket: {wsError} — manual capture still available.</div>}
       {camError ? <div style={{ color: 'var(--status-danger)', padding: 'var(--space-4)', textAlign: 'center' }}>{camError}</div> : (
         <div style={{ display: 'flex', gap: 'var(--space-4)' }}>
           {/* Camera view */}
           <div style={{ flex: 1, background: '#000', borderRadius: 'var(--radius-md)', overflow: 'hidden', position: 'relative', minHeight: 280 }}>
-            {captures[currentAngle]
+            {captures[currentAngle] && captures[currentAngle] !== 'done'
               ? <img src={captures[currentAngle]} style={{ width: '100%', height: 280, objectFit: 'cover' }} alt="captured" />
               : <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', height: 280, objectFit: 'cover', display: 'block' }} />
             }
@@ -90,17 +120,24 @@ function CaptureStep({ person, onNext, onBack }) {
             {analyzing && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 'var(--type-body-semibold-size)' }}>Analyzing…</div>}
             {/* Quality checks */}
             <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', gap: 'var(--space-4)', padding: 'var(--space-2)' }}>
-              {['Lighting good', 'Single face detected', 'Face centered'].map(label => (
-                <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)', fontSize: 11, color: qualityOk ? '#4ade80' : '#888' }}>
-                  {qualityOk ? <CheckmarkOutline size={12} /> : <CircleDash size={12} />} {label}
-                </span>
-              ))}
+              {wsFeedback
+                ? (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)', fontSize: 11, color: '#4ade80' }}>
+                    <CheckmarkOutline size={12} /> Frames: {wsFeedback.framesCollected}/{wsFeedback.framesNeeded}
+                  </span>
+                )
+                : ['Lighting good', 'Single face detected', 'Face centered'].map(label => (
+                  <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)', fontSize: 11, color: qualityOk ? '#4ade80' : '#888' }}>
+                    {qualityOk ? <CheckmarkOutline size={12} /> : <CircleDash size={12} />} {label}
+                  </span>
+                ))
+              }
             </div>
           </div>
           {/* Angle selector */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', paddingTop: 'var(--space-2)' }}>
             {ANGLES.map((angle, i) => {
-              const done = !!captures[angle]
+              const done = wsEnrolled || !!captures[angle]
               const active = i === angleIdx && !done
               return (
                 <div key={angle} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-1)' }}>
