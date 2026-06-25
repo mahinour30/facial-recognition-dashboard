@@ -36,7 +36,7 @@ export default function EntryVolumeChart() {
               contentStyle={{
                 fontSize: 12,
                 border: '1px solid #e2e8f0',
-                borderRadius: 4,
+                borderRadius: 0,
                 fontFamily: 'Open Sans, sans-serif',
               }}
             />

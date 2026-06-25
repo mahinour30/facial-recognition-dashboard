@@ -88,7 +88,7 @@ export default function Alerts() {
                 <td>
                   <span className={`badge ${statusBadgeClass(alert.status)}`}>
                     <span style={{
-                      width: 6, height: 6, borderRadius: '50%',
+                      width: 6, height: 6, borderRadius: 0'50%',
                       background: 'currentColor', display: 'inline-block',
                     }} />
                     {alert.status}

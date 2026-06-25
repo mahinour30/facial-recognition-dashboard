@@ -79,7 +79,7 @@ export default function LiveCameraFeed() {
                   onClick={requestCamera}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 6,
-                    padding: '8px 18px', borderRadius: 5, border: 'none',
+                    padding: '8px 18px', borderRadius: 0, border: 'none',
                     background: '#007cb0', color: '#fff',
                     fontSize: 13, fontWeight: 600, cursor: 'pointer',
                   }}
@@ -105,7 +105,7 @@ export default function LiveCameraFeed() {
                 </p>
                 <button
                   onClick={requestCamera}
-                  style={{ padding: '6px 14px', borderRadius: 4, border: '1px solid #555', background: 'transparent', color: '#ccc', fontSize: 12, cursor: 'pointer' }}
+                  style={{ padding: '6px 14px', borderRadius: 0, border: '1px solid #555', background: 'transparent', color: '#ccc', fontSize: 12, cursor: 'pointer' }}
                 >
                   Try again
                 </button>
@@ -117,7 +117,7 @@ export default function LiveCameraFeed() {
                 <p style={{ color: '#f59e0b', fontSize: 13, margin: 0 }}>⚠ Stream unavailable</p>
                 <button
                   onClick={requestCamera}
-                  style={{ padding: '6px 14px', borderRadius: 4, border: '1px solid #555', background: 'transparent', color: '#ccc', fontSize: 12, cursor: 'pointer' }}
+                  style={{ padding: '6px 14px', borderRadius: 0, border: '1px solid #555', background: 'transparent', color: '#ccc', fontSize: 12, cursor: 'pointer' }}
                 >
                   Retry
                 </button>

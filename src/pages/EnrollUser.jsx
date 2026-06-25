@@ -238,7 +238,7 @@ function ConfirmStep({ person, onBack, onFinish }) {
       <div className="confirm-success">
         <CheckCircle2 size={56} color="#26890d" />
         <p>Face vector created and stored securely. The captured image has been discarded per data retention policy.</p>
-        <div style={{ background: '#e6f9e1', border: '1px solid #b7eaab', borderRadius: 4, padding: '12px 20px', fontSize: 13, color: '#1f6f0e', fontWeight: 600, width: '100%', maxWidth: 340, textAlign: 'left' }}>
+        <div style={{ background: '#e6f9e1', border: '1px solid #b7eaab', borderRadius: 0, padding: '12px 20px', fontSize: 13, color: '#1f6f0e', fontWeight: 600, width: '100%', maxWidth: 340, textAlign: 'left' }}>
           <div>User: {person.name}</div>
           {person.employeeId && <div style={{ marginTop: 2, fontWeight: 400, color: '#53565a' }}>ID: {person.employeeId}</div>}
           <div style={{ marginTop: 4, fontWeight: 400, color: '#53565a' }}>
