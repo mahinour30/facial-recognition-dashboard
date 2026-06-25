@@ -951,6 +951,18 @@ body {
 .progress-bar__fill--blue  { background: #007cb0; }
 .progress-bar__fill--green { background: #26890d; }
 
+/* Multi-color flat segmented bar */
+.progress-bar--multi {
+  display: flex;
+  border-radius: 0;
+  background: transparent;
+}
+
+.progress-bar__seg {
+  height: 100%;
+  flex-shrink: 0;
+}
+
 .enrollment-stat__details {
   display: flex;
   gap: 14px;

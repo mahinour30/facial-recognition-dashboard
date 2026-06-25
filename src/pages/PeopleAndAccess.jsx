@@ -379,34 +379,43 @@ export default function PeopleAndAccess() {
 
       {/* Enrollment summary */}
       <div className="enrollment-stats">
+        {/* Consented Employees — 850 total */}
         <div className="enrollment-stat">
           <div className="enrollment-stat__header">
             <span className="enrollment-stat__label">Consented Employees</span>
-            <span className="enrollment-stat__pct">29%</span>
+            <span className="enrollment-stat__pct">84%</span>
           </div>
-          <div className="progress-bar">
-            <div className="progress-bar__fill progress-bar__fill--blue" style={{ width: '29%' }} />
+          <div className="progress-bar progress-bar--multi">
+            <div className="progress-bar__seg" style={{ width: '83.8%', background: '#26890d' }} />
+            <div className="progress-bar__seg" style={{ width: '10.6%', background: '#007cb0' }} />
+            <div className="progress-bar__seg" style={{ width: '1.2%',  background: '#da291c' }} />
+            <div className="progress-bar__seg" style={{ width: '4.5%',  background: '#bbbcbc' }} />
           </div>
           <div className="enrollment-stat__details">
-            <span>Total Employees: 803</span>
-            <span style={{ color: '#ed8b00' }}>● Awaiting Response: 90</span>
+            <span>Total Employees: 850</span>
+            <span style={{ color: '#26890d' }}>● Consented: 712</span>
+            <span style={{ color: '#007cb0' }}>● Awaiting Response: 90</span>
             <span style={{ color: '#da291c' }}>● Declined: 10</span>
-            <span>Remaining: 38</span>
+            <span style={{ color: '#97999b' }}>● Remaining: 38</span>
           </div>
         </div>
+
+        {/* Enrolled Employees — 712 consented */}
         <div className="enrollment-stat">
           <div className="enrollment-stat__header">
             <span className="enrollment-stat__label">Enrolled Employees</span>
             <span className="enrollment-stat__pct">96%</span>
           </div>
-          <div className="progress-bar">
-            <div className="progress-bar__fill progress-bar__fill--green" style={{ width: '96%' }} />
+          <div className="progress-bar progress-bar--multi">
+            <div className="progress-bar__seg" style={{ width: '95.6%', background: '#26890d' }} />
+            <div className="progress-bar__seg" style={{ width: '3.2%',  background: '#ed8b00' }} />
+            <div className="progress-bar__seg" style={{ width: '1.1%',  background: '#bbbcbc' }} />
           </div>
           <div className="enrollment-stat__details">
-            <span>Of 72 consented</span>
+            <span>Of 712 consented</span>
             <span style={{ color: '#26890d' }}>● Enrolled: 681</span>
             <span style={{ color: '#ed8b00' }}>● Awaiting Capture: 23</span>
-            <span>Remaining: 8</span>
+            <span style={{ color: '#97999b' }}>● Remaining: 8</span>
           </div>
         </div>
       </div>
