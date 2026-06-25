@@ -67,7 +67,7 @@ export default function CoverageCards({ onFilter }) {
 
         <SegmentedBar segments={[
           { value: 681, color: 'var(--color-primary-accessible-green)' },
-          { value: 23,  color: 'var(--color-primary-accessible-blue)' },
+          { value: 23,  color: 'var(--color-functional-colors-orange)' },
           { value: 8,   color: 'var(--color-secondary-gray-cool-gray-2)' },
         ]} />
 
@@ -79,7 +79,7 @@ export default function CoverageCards({ onFilter }) {
         {/* Legend below total */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
           <LegendItem color="var(--color-primary-accessible-green)" label="Enrolled: 681"          onClick={() => onFilter('enrolled')} />
-          <LegendItem color="var(--color-primary-accessible-blue)"  label="Awaiting Response: 23"  onClick={() => onFilter('awaiting')} />
+          <LegendItem color="var(--color-functional-colors-orange)"  label="Awaiting Capture: 23"  onClick={() => onFilter('awaiting')} />
           <LegendItem color="var(--color-secondary-gray-cool-gray-2)" label="Remaining: 8" />
         </div>
       </div>
