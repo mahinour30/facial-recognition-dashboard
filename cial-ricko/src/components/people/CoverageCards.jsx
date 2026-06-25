@@ -7,7 +7,7 @@ function Dot({ color }) {
 function SegmentedBar({ segments }) {
   const total = segments.reduce((s, seg) => s + seg.value, 0)
   return (
-    <div style={{ display: 'flex', width: '100%', height: 12, borderRadius: 'var(--radius-pill)', overflow: 'hidden', marginBottom: 'var(--space-2)' }}>
+    <div style={{ display: 'flex', width: '100%', height: 12, overflow: 'hidden', marginBottom: 'var(--space-2)' }}>
       {segments.map((seg, i) => (
         <div key={i} style={{ width: (seg.value / total * 100) + '%', background: seg.color, transition: 'width 0.3s', flexShrink: 0 }} />
       ))}
