@@ -331,7 +331,11 @@ export default function PeopleAndAccess() {
     if (first) { setDetailPerson(first); setModal('userdetails'); }
   };
 
-  const handleEnrollConfirm = () => { closeModal(); navigate('/people/enroll'); };
+  const handleEnrollConfirm = () => {
+    const person = rows.find(p => p.id === targetIds[0]);
+    closeModal();
+    navigate('/people/enroll', { state: { person } });
+  };
 
   const handleDeleteConfirm = () => {
     if (deleteLabel === 'Cancel deletion') {
@@ -351,8 +355,16 @@ export default function PeopleAndAccess() {
     closeModal();
   };
 
-  const handleCaptureConfirm = () => { closeModal(); navigate('/people/enroll'); };
-  const handleReenrollConfirm = () => { closeModal(); navigate('/people/enroll'); };
+  const handleCaptureConfirm = () => {
+    const person = rows.find(p => p.id === targetIds[0]);
+    closeModal();
+    navigate('/people/enroll', { state: { person } });
+  };
+  const handleReenrollConfirm = () => {
+    const person = rows.find(p => p.id === targetIds[0]);
+    closeModal();
+    navigate('/people/enroll', { state: { person } });
+  };
 
   const count = targetIds.length;
 
@@ -485,7 +497,7 @@ export default function PeopleAndAccess() {
               const actions = getActions(person);
               const rowHandlers = {
                 viewProfile:    () => { setDetailPerson(person); setModal('userdetails'); },
-                edit:           () => {},
+                edit:           () => { setDetailPerson(person); setModal('userdetails'); },
                 requestConsent: () => openModal('consent', [person.id]),
                 invite:         () => openModal('enroll', [person.id]),
                 capture:        () => openModal('capture', [person.id]),
