@@ -32,7 +32,7 @@ function getActions(person) {
       return { ...base, requestConsent: true, requestConsentLabel: 'Resend consent' };
 
     case 'Ready to enroll':
-      return { ...base, invite: true, capture: true, withdraw: true };
+      return { ...base, capture: true, withdraw: true };
 
     case 'Awaiting Capture':
       return { ...base, capture: true, withdraw: true };
